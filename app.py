@@ -1,6 +1,8 @@
 import json
 import os
 import atexit
+import time
+import subprocess
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -10,6 +12,22 @@ from pyngrok import ngrok, conf
 conf.get_default().ngrok_path = r"C:\ngrok\ngrok.exe"
 
 app = Flask(__name__)
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, ngrok-skip-browser-warning"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    return response
+
+
+@app.route("/status", methods=["GET", "OPTIONS"])
+def status():
+    if request.method == "OPTIONS":
+        return "", 200
+    data = load_status()
+    return jsonify(data)
 
 NGROK_DOMAIN = "unwomanly-shame-pastime.ngrok-free.dev"
 NGROK_PORT = 3333
@@ -42,7 +60,9 @@ def load_status():
 
 
 def default_status():
+    today = datetime.now().strftime("%Y-%m-%d")
     return {
+        "date": today,
         "tasks": [{"name": item["name"], "time": item["time"], "status": "upcoming"} for item in SCHEDULE],
         "globalStatus": "Available",
         "note": "",
@@ -55,6 +75,24 @@ def save_status(data):
     data["lastUpdated"] = datetime.now().isoformat()
     with open(STATUS_FILE, "w") as f:
         json.dump(data, f, indent=2)
+    # Also save to docs folder for GitHub backup
+    docs_status = os.path.join("docs", "status.json")
+    with open(docs_status, "w") as f:
+        json.dump(data, f, indent=2)
+    # Auto push to GitHub
+    push_to_github()
+
+
+def push_to_github():
+    try:
+        subprocess.run(["git", "add", "docs/status.json"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Update status.json"], check=True, capture_output=True)
+        subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True)
+        print("[git] Auto-pushed status.json to GitHub")
+    except subprocess.CalledProcessError as e:
+        print(f"[git] ERROR: {e}")
+    except Exception as e:
+        print(f"[git] ERROR: {e}")
 
 
 def reset_daily():
@@ -76,12 +114,6 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/status")
-def status():
-    data = load_status()
-    return jsonify(data)
-
-
 @app.route("/api/update", methods=["POST"])
 def update():
     data = request.get_json()
@@ -94,6 +126,7 @@ def update():
 def start_ngrok():
     try:
         ngrok.kill()
+        time.sleep(2)
         tunnel = ngrok.connect(NGROK_PORT, domain=NGROK_DOMAIN)
         public_url = tunnel.public_url
         print(f"[ngrok] Tunnel active: {public_url}")
@@ -105,7 +138,6 @@ def start_ngrok():
         print(f"[ngrok] ERROR: {e}")
         print("[ngrok] Make sure you have added your authtoken:")
         print("        ngrok config add-authtoken <YOUR_TOKEN>")
-        print("        (Or run once: python -c \"from pyngrok import ngrok; ngrok.set_auth_token('<TOKEN>')\")")
         return None
 
 

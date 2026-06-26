@@ -7,3 +7,4 @@ env/
 venv/
 .venv/
 status.json
+!docs/status.json

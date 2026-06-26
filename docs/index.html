@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Current Status</title>
+  <script src="config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0b0b0f;
+      color: #d1d1db;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #14141b;
+      border: 1px solid #23232e;
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .name { font-size: 1.1rem; font-weight: 600; color: #f2f2f7; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; margin-right: 8px;
+    }
+    .dot.Available { background: #34d399; }
+    .dot.Busy { background: #f87171; }
+    .dot.dnd { background: #f59e0b; }
+    .dot.Away { background: #8b8b9a; }
+    .status-pill {
+      font-size: 0.8rem; padding: 5px 12px; border-radius: 20px;
+      background: #1e1e28; color: #a0a0b0; display: flex; align-items: center;
+    }
+    .note {
+      font-size: 0.95rem; color: #b4b4c0; line-height: 1.55;
+      margin-bottom: 18px; min-height: 1.5em;
+    }
+    .note.empty { color: #5a5a6a; font-style: italic; }
+    .divider { height: 1px; background: #23232e; margin: 16px 0; }
+    .section-title {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #6b6b7b; margin-bottom: 10px;
+    }
+    .task {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid #1c1c26;
+    }
+    .task:last-child { border-bottom: none; }
+    .task-left { display: flex; align-items: center; gap: 10px; }
+    .task-time { font-size: 0.75rem; color: #5a5a6a; min-width: 56px; }
+    .task-name { font-size: 0.875rem; color: #d1d1db; }
+    .task-badge {
+      font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; text-transform: capitalize;
+    }
+    .task-badge.upcoming { background: #23232e; color: #6b6b7b; }
+    .task-badge.current { background: #1b2e24; color: #34d399; }
+    .task-badge.done { background: #1b2432; color: #5b8def; }
+    .task-badge.skipped { background: #2e1b1b; color: #f87171; }
+    .footer {
+      font-size: 0.7rem; color: #4a4a5a; margin-top: 18px; text-align: right;
+    }
+    .offline { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span class="name">Status</span>
+      <span class="status-pill" id="global-pill"><span class="dot" id="global-dot"></span><span id="global-text">Loading...</span></span>
+    </div>
+    <div class="note empty" id="note">Loading...</div>
+    <div class="divider"></div>
+    <div class="section-title">Schedule</div>
+    <div id="task-list"></div>
+    <div class="footer" id="footer"></div>
+  </div>
+
+  <script>
+    const FETCH_MS = 30 * 60 * 1000;
+    const STORAGE_KEY = 'status_cache';
+    const LAST_FETCH_KEY = 'status_last_fetch';
+
+    function getCache() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+    }
+    function setCache(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(LAST_FETCH_KEY, Date.now().toString());
+    }
+    function getLastFetch() {
+      const v = localStorage.getItem(LAST_FETCH_KEY);
+      return v ? parseInt(v, 10) : 0;
+    }
+
+    function render(data, fromCache) {
+      const global = data.globalStatus || 'Available';
+      const note = data.note || '';
+      const tasks = data.tasks || [];
+      const updated = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
+
+      const pill = document.getElementById('global-pill');
+      const dot = document.getElementById('global-dot');
+      const gtext = document.getElementById('global-text');
+      dot.className = 'dot ' + (global === 'Do not disturb' ? 'dnd' : global);
+      gtext.textContent = global;
+
+      const noteEl = document.getElementById('note');
+      if (note) { noteEl.textContent = note; noteEl.classList.remove('empty'); }
+      else { noteEl.textContent = 'No note'; noteEl.classList.add('empty'); }
+
+      const list = document.getElementById('task-list');
+      list.innerHTML = '';
+      for (const t of tasks) {
+        const row = document.createElement('div');
+        row.className = 'task';
+        row.innerHTML = `
+          <div class="task-left">
+            <span class="task-time">${t.time}</span>
+            <span class="task-name">${t.name}</span>
+          </div>
+          <span class="task-badge ${t.status}">${t.status}</span>
+        `;
+        list.appendChild(row);
+      }
+
+      const timeStr = updated.toLocaleString();
+      const footer = document.getElementById('footer');
+      if (fromCache) {
+        footer.innerHTML = `<span class="offline">Offline</span> — Last updated ${timeStr}`;
+      } else {
+        footer.textContent = `Updated ${timeStr}`;
+      }
+    }
+
+    async function fetchStatus() {
+      const url = (typeof NGROK_URL !== 'undefined' ? NGROK_URL : '') + '/status';
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Bad response');
+        const data = await res.json();
+        setCache(data);
+        render(data, false);
+      } catch (e) {
+        const cached = getCache();
+        if (cached) {
+          render(cached, true);
+        } else {
+          document.getElementById('global-text').textContent = 'Unavailable';
+          document.getElementById('note').textContent = 'Could not load status.';
+          document.getElementById('footer').textContent = 'No cached data available.';
+        }
+      }
+    }
+
+    function shouldFetch() {
+      return Date.now() - getLastFetch() > FETCH_MS;
+    }
+
+    // Initial load from cache for instant render, then fetch
+    const cached = getCache();
+    if (cached) render(cached, true);
+    fetchStatus();
+
+    // Periodic fetch
+    setInterval(fetchStatus, FETCH_MS);
+
+    // Auto-reset frontend cache at midnight
+    function scheduleMidnightReset() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+      const ms = next - now;
+      setTimeout(() => {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LAST_FETCH_KEY);
+        location.reload();
+      }, ms);
+    }
+    scheduleMidnightReset();
+  </script>
+</body>
+</html>

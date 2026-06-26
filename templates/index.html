@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status Editor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f11;
+      color: #e2e2e8;
+      padding: 40px 20px;
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.25rem; margin-bottom: 24px; color: #fff; }
+    .section { background: #1a1a1f; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8b8b9a; margin-bottom: 12px; }
+    label { display: block; font-size: 0.875rem; color: #a0a0b0; margin-bottom: 6px; }
+    select, input[type="text"], textarea {
+      width: 100%;
+      background: #0f0f11;
+      border: 1px solid #2a2a35;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e2e2e8;
+      font-size: 0.9375rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    select:focus, input:focus, textarea:focus { border-color: #5b8def; }
+    textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+    .ngrok-box {
+      display: flex; align-items: center; gap: 10px; margin-top: 8px;
+    }
+    .ngrok-box input { flex: 1; }
+    .copy-btn {
+      background: #2a2a35; border: none; border-radius: 8px; color: #e2e2e8;
+      padding: 10px 16px; cursor: pointer; font-size: 0.875rem; white-space: nowrap;
+    }
+    .copy-btn:hover { background: #33333f; }
+    .task-list { display: flex; flex-direction: column; gap: 10px; }
+    .task-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #0f0f11; border: 1px solid #2a2a35; border-radius: 10px;
+      padding: 14px 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    }
+    .task-item:hover { border-color: #3a3a4a; background: #13131a; }
+    .task-left { display: flex; align-items: center; gap: 14px; }
+    .task-time { font-size: 0.75rem; color: #6b6b7b; min-width: 64px; }
+    .task-name { font-size: 0.9375rem; color: #e2e2e8; }
+    .badge {
+      font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; text-transform: capitalize;
+      font-weight: 500; letter-spacing: 0.02em;
+    }
+    .badge.upcoming { background: #2a2a35; color: #8b8b9a; }
+    .badge.current { background: #1b3a2f; color: #4ade80; }
+    .badge.done { background: #1b2a3a; color: #5b8def; }
+    .badge.skipped { background: #3a2a2a; color: #f87171; }
+    .saved { font-size: 0.75rem; color: #4ade80; opacity: 0; transition: opacity 0.3s; margin-top: 10px; text-align: right; }
+    .saved.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <h1>Status Editor</h1>
+
+  <div class="section">
+    <div class="section-title">Global</div>
+    <label for="global-status">Status</label>
+    <select id="global-status">
+      <option>Available</option>
+      <option>Busy</option>
+      <option>Do not disturb</option>
+      <option>Away</option>
+    </select>
+    <label for="note" style="margin-top: 14px;">Note</label>
+    <textarea id="note" placeholder="What's happening?"></textarea>
+    <label for="ngrok-url" style="margin-top: 14px;">ngrok Public URL</label>
+    <div class="ngrok-box">
+      <input type="text" id="ngrok-url" placeholder="https://abc123.ngrok-free.app">
+      <button class="copy-btn" id="copy-ngrok">Copy</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Schedule</div>
+    <div class="task-list" id="task-list"></div>
+    <div class="saved" id="saved">Saved</div>
+  </div>
+
+  <script>
+    const STATUS_ORDER = ['upcoming', 'current', 'done', 'skipped'];
+    let statusData = null;
+
+    async function load() {
+      const res = await fetch('/status');
+      statusData = await res.json();
+      render();
+    }
+
+    function render() {
+      document.getElementById('global-status').value = statusData.globalStatus || 'Available';
+      document.getElementById('note').value = statusData.note || '';
+      document.getElementById('ngrok-url').value = statusData.ngrokUrl || '';
+
+      const list = document.getElementById('task-list');
+      list.innerHTML = '';
+      for (const task of statusData.tasks || []) {
+        const el = document.createElement('div');
+        el.className = 'task-item';
+        el.innerHTML = `
+          <div class="task-left">
+            <span class="task-time">${task.time}</span>
+            <span class="task-name">${task.name}</span>
+          </div>
+          <span class="badge ${task.status}">${task.status}</span>
+        `;
+        el.addEventListener('click', () => cycleTask(task));
+        list.appendChild(el);
+      }
+    }
+
+    function cycleTask(task) {
+      const idx = STATUS_ORDER.indexOf(task.status);
+      task.status = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length];
+      save();
+      render();
+    }
+
+    async function save() {
+      statusData.globalStatus = document.getElementById('global-status').value;
+      statusData.note = document.getElementById('note').value;
+      statusData.ngrokUrl = document.getElementById('ngrok-url').value;
+      await fetch('/api/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(statusData)
+      });
+      const saved = document.getElementById('saved');
+      saved.classList.add('show');
+      setTimeout(() => saved.classList.remove('show'), 1200);
+    }
+
+    document.getElementById('global-status').addEventListener('change', save);
+    document.getElementById('note').addEventListener('input', debounce(save, 400));
+    document.getElementById('ngrok-url').addEventListener('input', debounce(save, 400));
+
+    document.getElementById('copy-ngrok').addEventListener('click', () => {
+      const input = document.getElementById('ngrok-url');
+      navigator.clipboard.writeText(input.value).catch(() => {});
+    });
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    load();
+  </script>
+</body>
+</html>

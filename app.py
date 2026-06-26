@@ -85,9 +85,10 @@ def save_status(data):
 
 def push_to_github():
     try:
-        subprocess.run(["git", "add", "docs/status.json"], check=True, capture_output=True)
-        subprocess.run(["git", "commit", "-m", "Update status.json"], check=True, capture_output=True)
-        subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True)
+        docs_dir = os.path.join(os.getcwd(), "docs")
+        subprocess.run(["git", "add", "status.json"], check=True, capture_output=True, cwd=docs_dir)
+        subprocess.run(["git", "commit", "-m", "Update status.json"], check=True, capture_output=True, cwd=docs_dir)
+        subprocess.run(["git", "push", "origin", "main"], check=True, capture_output=True, cwd=docs_dir)
         print("[git] Auto-pushed status.json to GitHub")
     except subprocess.CalledProcessError as e:
         print(f"[git] ERROR: {e}")

@@ -3,95 +3,307 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Current Status</title>
+  <title>Status</title>
   <script src="config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080810;
+      --surface:  #0f0f1a;
+      --border:   #1e1e2e;
+      --muted:    #3a3a50;
+      --subtle:   #5a5a78;
+      --body:     #b8b8cc;
+      --bright:   #eeeef5;
+      --green:    #3dffa0;
+      --green-dim:#0d3322;
+      --red:      #ff6b6b;
+      --red-dim:  #2e1010;
+      --amber:    #ffb347;
+      --amber-dim:#2e1e08;
+      --gray:     #6b6b88;
+      --blue:     #7eb8ff;
+      --blue-dim: #0d1e35;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--body);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0b0b0f;
-      color: #d1d1db;
-      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      min-height: 100vh;
       padding: 24px;
     }
+
     .card {
-      background: #14141b;
-      border: 1px solid #23232e;
-      border-radius: 16px;
-      padding: 28px;
       width: 100%;
-      max-width: 420px;
+      max-width: 400px;
     }
-    .header {
+
+    /* ── Top identity row ── */
+    .identity {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
+      margin-bottom: 28px;
     }
-    .name { font-size: 1.1rem; font-weight: 600; color: #f2f2f7; }
-    .dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      display: inline-block; margin-right: 8px;
+
+    .identity-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtle);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .dot.Available { background: #34d399; }
-    .dot.Busy { background: #f87171; }
-    .dot.dnd { background: #f59e0b; }
-    .dot.Away { background: #8b8b9a; }
+
+    /* ── Status pill ── */
     .status-pill {
-      font-size: 0.8rem; padding: 5px 12px; border-radius: 20px;
-      background: #1e1e28; color: #a0a0b0; display: flex; align-items: center;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 11px 5px 8px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--body);
+      transition: border-color .3s, color .3s;
     }
-    .note {
-      font-size: 0.95rem; color: #b4b4c0; line-height: 1.55;
-      margin-bottom: 18px; min-height: 1.5em;
+
+    .pulse-wrap {
+      position: relative;
+      width: 8px;
+      height: 8px;
+      flex-shrink: 0;
     }
-    .note.empty { color: #5a5a6a; font-style: italic; }
-    .divider { height: 1px; background: #23232e; margin: 16px 0; }
-    .section-title {
-      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
-      color: #6b6b7b; margin-bottom: 10px;
+
+    .pulse-core {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
     }
-    .task {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 0; border-bottom: 1px solid #1c1c26;
+
+    .pulse-ring {
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      opacity: 0;
+      animation: pulse-out 2.4s ease-out infinite;
     }
-    .task:last-child { border-bottom: none; }
-    .task-left { display: flex; align-items: center; gap: 10px; }
-    .task-time { font-size: 0.75rem; color: #5a5a6a; min-width: 56px; }
-    .task-name { font-size: 0.875rem; color: #d1d1db; }
-    .task-badge {
-      font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; text-transform: capitalize;
+
+    @keyframes pulse-out {
+      0%   { transform: scale(.6); opacity: .6; }
+      100% { transform: scale(2.2); opacity: 0; }
     }
-    .task-badge.upcoming { background: #23232e; color: #6b6b7b; }
-    .task-badge.current { background: #1b2e24; color: #34d399; }
-    .task-badge.done { background: #1b2432; color: #5b8def; }
-    .task-badge.skipped { background: #2e1b1b; color: #f87171; }
+
+    .state-available .pulse-core,
+    .state-available .pulse-ring  { background: var(--green); }
+    .state-available               { border-color: #1e3830; color: var(--green); }
+
+    .state-busy .pulse-core,
+    .state-busy .pulse-ring        { background: var(--red); }
+    .state-busy                    { border-color: #3a1e1e; color: var(--red); }
+
+    .state-dnd .pulse-core,
+    .state-dnd .pulse-ring         { background: var(--amber); }
+    .state-dnd                     { border-color: #3a2e10; color: var(--amber); }
+
+    .state-away .pulse-core        { background: var(--gray); }
+    .state-away .pulse-ring        { background: var(--gray); animation: none; }
+    .state-away                    { color: var(--gray); }
+
+    /* ── Current task block ── */
+    .current-block {
+      margin-bottom: 28px;
+    }
+
+    .current-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .current-task {
+      font-size: 26px;
+      font-weight: 300;
+      color: var(--bright);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 6px;
+      min-height: 32px;
+    }
+
+    .current-note {
+      font-size: 13px;
+      color: var(--subtle);
+      font-style: italic;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── Schedule ── */
+    .sched-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .task-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 0;
+      border-bottom: 1px solid #0e0e18;
+      transition: opacity .2s;
+    }
+
+    .task-row:last-child { border-bottom: none; }
+    .task-row.is-done    { opacity: .35; }
+    .task-row.is-skipped { opacity: .25; }
+
+    .task-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      min-width: 58px;
+      flex-shrink: 0;
+    }
+
+    .task-name {
+      flex: 1;
+      font-size: 13px;
+      color: var(--body);
+    }
+
+    .task-row.is-current .task-name { color: var(--bright); font-weight: 500; }
+
+    .badge {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    .badge-current  { background: var(--green-dim);  color: var(--green);  border: 1px solid #1a4432; }
+    .badge-done     { background: var(--blue-dim);   color: var(--blue);   border: 1px solid #1a2e48; }
+    .badge-skipped  { background: var(--red-dim);    color: var(--red);    border: 1px solid #3a1818; }
+    .badge-upcoming { background: transparent;       color: var(--muted);  border: 1px solid var(--border); }
+
+    /* ── Footer ── */
     .footer {
-      font-size: 0.7rem; color: #4a4a5a; margin-top: 18px; text-align: right;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
     }
-    .offline { color: #f87171; }
+
+    .footer-offline { color: var(--red); }
+
+    .refresh-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+      margin-right: 6px;
+      transition: background .3s;
+    }
+
+    .refresh-dot.live { background: var(--green); }
+
+    /* ── Loading skeleton ── */
+    .skeleton {
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      margin-bottom: 8px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pulse-ring, .skeleton { animation: none; }
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="header">
-      <span class="name">Status</span>
-      <span class="status-pill" id="global-pill"><span class="dot" id="global-dot"></span><span id="global-text">Loading...</span></span>
+    <div class="identity">
+      <span class="identity-name">status.page</span>
+      <div class="status-pill" id="status-pill">
+        <div class="pulse-wrap">
+          <div class="pulse-core" id="pulse-core"></div>
+          <div class="pulse-ring" id="pulse-ring"></div>
+        </div>
+        <span id="status-text">—</span>
+      </div>
     </div>
-    <div class="note empty" id="note">Loading...</div>
+
+    <div class="current-block">
+      <div class="current-label">right now</div>
+      <div class="current-task" id="current-task">
+        <div class="skeleton" style="width:55%;height:28px;border-radius:6px"></div>
+      </div>
+      <div class="current-note" id="current-note"></div>
+    </div>
+
     <div class="divider"></div>
-    <div class="section-title">Schedule</div>
-    <div id="task-list"></div>
-    <div class="footer" id="footer"></div>
+
+    <div class="sched-label">today</div>
+    <div id="task-list">
+      <div class="skeleton" style="width:100%"></div>
+      <div class="skeleton" style="width:88%"></div>
+      <div class="skeleton" style="width:92%"></div>
+      <div class="skeleton" style="width:80%"></div>
+    </div>
+
+    <div class="footer">
+      <span><span class="refresh-dot" id="refresh-dot"></span><span id="footer-time">loading</span></span>
+      <span id="footer-status"></span>
+    </div>
   </div>
 
   <script>
-    const FETCH_MS = 30 * 60 * 1000;
-    const STORAGE_KEY = 'status_cache';
-    const LAST_FETCH_KEY = 'status_last_fetch';
+    const FETCH_MS = 15 * 60 * 1000;
+    const STORAGE_KEY = 'status_cache_v2';
+    const LAST_FETCH_KEY = 'status_last_fetch_v2';
+
+    const statusMap = {
+      'Available':       { cls: 'state-available', label: 'Available' },
+      'Busy':            { cls: 'state-busy',      label: 'Busy' },
+      'Do not disturb':  { cls: 'state-dnd',       label: 'Do not disturb' },
+      'Away':            { cls: 'state-away',       label: 'Away' },
+    };
 
     function getCache() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
@@ -105,90 +317,110 @@
       return v ? parseInt(v, 10) : 0;
     }
 
-    function render(data, fromCache) {
-      const global = data.globalStatus || 'Available';
-      const note = data.note || '';
-      const tasks = data.tasks || [];
+    function render(data, offline) {
+      const global = data.globalStatus || 'Away';
+      const note   = data.note || '';
+      const tasks  = data.tasks || [];
       const updated = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
 
-      const pill = document.getElementById('global-pill');
-      const dot = document.getElementById('global-dot');
-      const gtext = document.getElementById('global-text');
-      dot.className = 'dot ' + (global === 'Do not disturb' ? 'dnd' : global);
-      gtext.textContent = global;
+      // Status pill
+      const pill   = document.getElementById('status-pill');
+      const meta   = statusMap[global] || statusMap['Away'];
+      pill.className = 'status-pill ' + meta.cls;
+      document.getElementById('status-text').textContent = meta.label;
 
-      const noteEl = document.getElementById('note');
-      if (note) { noteEl.textContent = note; noteEl.classList.remove('empty'); }
-      else { noteEl.textContent = 'No note'; noteEl.classList.add('empty'); }
+      // Find current task
+      const currentTask = tasks.find(t => t.status === 'current');
+      document.getElementById('current-task').textContent = currentTask ? currentTask.name : '—';
+      const noteEl = document.getElementById('current-note');
+      noteEl.textContent = note || '';
 
+      // Task list
       const list = document.getElementById('task-list');
       list.innerHTML = '';
       for (const t of tasks) {
         const row = document.createElement('div');
-        row.className = 'task';
+        row.className = 'task-row' +
+          (t.status === 'done'    ? ' is-done'    :
+           t.status === 'skipped' ? ' is-skipped' :
+           t.status === 'current' ? ' is-current' : '');
+
+        const badge = t.status === 'current'  ? '<span class="badge badge-current">now</span>'  :
+                      t.status === 'done'     ? '<span class="badge badge-done">done</span>'     :
+                      t.status === 'skipped'  ? '<span class="badge badge-skipped">skip</span>'  :
+                                                '<span class="badge badge-upcoming">—</span>';
         row.innerHTML = `
-          <div class="task-left">
-            <span class="task-time">${t.time}</span>
-            <span class="task-name">${t.name}</span>
-          </div>
-          <span class="task-badge ${t.status}">${t.status}</span>
+          <span class="task-time">${t.time}</span>
+          <span class="task-name">${t.name}</span>
+          ${badge}
         `;
         list.appendChild(row);
       }
 
-      const timeStr = updated.toLocaleString();
-      const footer = document.getElementById('footer');
-      if (fromCache) {
-        footer.innerHTML = `<span class="offline">Offline</span> — Last updated ${timeStr}`;
+      // Footer
+      const dot = document.getElementById('refresh-dot');
+      const footerTime = document.getElementById('footer-time');
+      const footerStatus = document.getElementById('footer-status');
+      const timeStr = updated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      if (offline) {
+        dot.classList.remove('live');
+        footerTime.innerHTML = `<span class="footer-offline">offline</span> · ${timeStr}`;
+        footerStatus.textContent = 'cached';
       } else {
-        footer.textContent = `Updated ${timeStr}`;
+        dot.classList.add('live');
+        footerTime.textContent = timeStr;
+        footerStatus.textContent = 'live';
       }
     }
 
     async function fetchStatus() {
-      const url = (typeof NGROK_URL !== 'undefined' ? NGROK_URL : '') + '/status';
+      const base = (typeof NGROK_URL !== 'undefined' ? NGROK_URL : '');
       try {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error('Bad response');
+        const res = await fetch(base + '/status', {
+          cache: 'no-store',
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        if (!res.ok) throw new Error('bad response');
         const data = await res.json();
         setCache(data);
         render(data, false);
-      } catch (e) {
+      } catch {
+        // GitHub raw fallback
+        try {
+          if (typeof GITHUB_RAW_URL !== 'undefined') {
+            const r2 = await fetch(GITHUB_RAW_URL, { cache: 'no-store' });
+            if (r2.ok) {
+              const data = await r2.json();
+              const today = new Date().toISOString().split('T')[0];
+              if (data.date === today) { setCache(data); render(data, true); return; }
+            }
+          }
+        } catch {}
         const cached = getCache();
         if (cached) {
           render(cached, true);
         } else {
-          document.getElementById('global-text').textContent = 'Unavailable';
-          document.getElementById('note').textContent = 'Could not load status.';
-          document.getElementById('footer').textContent = 'No cached data available.';
+          document.getElementById('current-task').textContent = 'unavailable';
+          document.getElementById('footer-time').textContent = 'no data';
         }
       }
     }
 
-    function shouldFetch() {
-      return Date.now() - getLastFetch() > FETCH_MS;
-    }
-
-    // Initial load from cache for instant render, then fetch
+    // Init
     const cached = getCache();
     if (cached) render(cached, true);
     fetchStatus();
-
-    // Periodic fetch
     setInterval(fetchStatus, FETCH_MS);
 
-    // Auto-reset frontend cache at midnight
-    function scheduleMidnightReset() {
-      const now = new Date();
-      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-      const ms = next - now;
-      setTimeout(() => {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(LAST_FETCH_KEY);
-        location.reload();
-      }, ms);
-    }
-    scheduleMidnightReset();
+    // Midnight reset
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    setTimeout(() => {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LAST_FETCH_KEY);
+      location.reload();
+    }, next - now);
   </script>
 </body>
 </html>

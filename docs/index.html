@@ -375,7 +375,7 @@
     }
 
     async function fetchStatus() {
-      const base = (typeof NGROK_URL !== 'undefined' ? NGROK_URL : '');
+      const base = (typeof API_URL !== 'undefined' ? API_URL : '');
       try {
         const res = await fetch(base + '/status', {
           cache: 'no-store',

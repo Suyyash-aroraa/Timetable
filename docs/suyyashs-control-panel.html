@@ -316,7 +316,7 @@
     }
 
     async function load() {
-      const base = (typeof NGROK_URL !== 'undefined' ? NGROK_URL : '');
+      const base = (typeof API_URL !== 'undefined' ? API_URL : '');
       try {
         const res = await fetch(base + '/status', { headers: { 'ngrok-skip-browser-warning': 'true' } });
         if(!res.ok) throw new Error();
@@ -367,7 +367,7 @@
       statusData.globalStatus = document.getElementById('global-status').value;
       statusData.note = document.getElementById('note').value;
 
-      const base = (typeof NGROK_URL !== 'undefined' ? NGROK_URL : '');
+      const base = (typeof API_URL !== 'undefined' ? API_URL : '');
       try {
         const res = await fetch(base + '/api/update', {
           method: 'POST',

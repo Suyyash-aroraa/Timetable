@@ -3,6 +3,7 @@ import os
 import atexit
 import time
 import subprocess
+import requests
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -56,6 +57,19 @@ def load_status():
     if os.path.exists(STATUS_FILE):
         with open(STATUS_FILE, "r") as f:
             return json.load(f)
+    # Fallback to GitHub if running on Render and no local file
+    if os.getenv("RENDER"):
+        try:
+            resp = requests.get("https://raw.githubusercontent.com/Suyyash-aroraa/Timetable/main/docs/status.json", timeout=5)
+            if resp.ok:
+                data = resp.json()
+                # Check if data is from today
+                today = datetime.now().strftime("%Y-%m-%d")
+                if data.get("date") == today:
+                    save_status(data)  # Cache locally
+                    return data
+        except:
+            pass
     return default_status()
 
 
@@ -143,6 +157,8 @@ def start_ngrok():
 
 
 if __name__ == "__main__":
-    tunnel = start_ngrok()
-    atexit.register(ngrok.kill)
-    app.run(host="0.0.0.0", port=NGROK_PORT, debug=False)
+    # Skip ngrok on Render
+    if not os.getenv("RENDER"):
+        tunnel = start_ngrok()
+        atexit.register(ngrok.kill)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", NGROK_PORT)), debug=False)

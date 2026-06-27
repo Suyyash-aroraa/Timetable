@@ -2,42 +2,42 @@
   "tasks": [
     {
       "name": "Gym",
-      "status": "done",
+      "status": "upcoming",
       "time": "7:00 AM"
     },
     {
       "name": "Shake",
-      "status": "done",
+      "status": "upcoming",
       "time": "9:00 AM"
     },
     {
       "name": "Free block",
-      "status": "done",
+      "status": "upcoming",
       "time": "10:00 AM"
     },
     {
       "name": "Kwality",
-      "status": "done",
+      "status": "upcoming",
       "time": "12:00 PM"
     },
     {
       "name": "IELTS",
-      "status": "done",
+      "status": "upcoming",
       "time": "12:30 PM"
     },
     {
       "name": "Game",
-      "status": "done",
+      "status": "upcoming",
       "time": "2:00 PM"
     },
     {
       "name": "GRE",
-      "status": "skipped",
+      "status": "upcoming",
       "time": "3:15 PM"
     },
     {
       "name": "Lunch / Kwality",
-      "status": "current",
+      "status": "upcoming",
       "time": "4:00 PM"
     },
     {
@@ -62,8 +62,8 @@
     }
   ],
   "globalStatus": "Available",
-  "note": "Something",
-  "lastUpdated": "2026-06-26T15:54:05.225578",
+  "note": "",
+  "lastUpdated": "2026-06-27T14:44:32.139942",
   "ngrokUrl": "https://unwomanly-shame-pastime.ngrok-free.dev",
   "date": "2026-06-26"
 }
